@@ -1,0 +1,249 @@
+Version 0.1
+
+INCOMPATIBLE CHANGES
+
+- Fins.Model is no longer the go-to location for finding objects.
+    In its place, you want to use context->find and friends. To get 
+    a context for your data model, use Fins.DataSource.modelid, where
+    _default is the default.
+- Default module name for data mapping definitions has changed from
+    Appname.Model to Appname.DataMappings. This can be changed by
+    creating a class called "defaults" that inherits Fins.Helpers.Defaults
+    and overrides these default value names.
+- Many model functions have changed to take a DataModelContext object
+    as an optional or required argument as a means of supporting multiple
+    database connections per model definition. In situations where the 
+    context is optional, the default context will be used if a context
+    is not provided. 
+- Access to Model objects require DirectAccessInstance, rather than the
+    previous behavior where this was optionally a DataObjectInstance.
+- FCGI Support requires a recent version of Public.Web.FCGI, as changes
+    in the API of this module changed incompatably.
+- Simple template changes: foreach argument "var" can now be a variable 
+    (preceeded by a '$') or a constant string, as with macro variables.
+- Macro syntax: most template macros that accept arguments that are 
+    variables located in the template data (usually, they are arguments 
+    named "var") can now be a constant string (var="somestring") or the 
+    previous behavior when preceeded by a '$' (var="$item.description").
+
+NEW FEATURES AND BUG FIXES
+
+- A DocController can provide a preferred template type to use instead of
+    the application's default.
+- Added FinsModel.lower_case_link_names to control how link names are capitalized.
+- Changes to make sqlite-based models more consistent with mysql models,
+    especially when using default values for datetime fields.
+- Added ability for db personality to specify field class used for a field 
+     type.
+- Key reference fields (fields that contain the id of another type of object)
+    now return zero instead of a new object when the referring id is zero or 
+    empty.
+- Added Fins.Application.reload_controllers()
+- Fixed a few pluralization rules.
+- Added Makefile.refdoc for building reference documentation
+- Added Fins.Model.SortCriteria()
+- Added --model argument to ModelBuilder to specify which model to use 
+    (when multiple model definitions exist).
+- Added DataModelContext()->start_transaction and friends. Needs some 
+    additional work to behave when model level autocommit is turned off.
+- Added Fins.DataSource as the entry point for multiple model definitions.
+- The default model config section can specify an id, which can be used
+    to retrieve a context handle (in addition to using _default). 
+- Revamped Fins.Model.Repository (finding objects moved to DataModelContext),
+    and Fins.Model.module (no longer an instance of Repository).
+- Multiple data models can be defined by specifying additional sections
+    in the application config file in the form [model_(identifer)] where
+    id, datasource, definition_module and debug are required values.  
+- Added Configuration.get_sections()
+- Appname.Model is now Appname.DataMappings, for clarity. (see 
+    INCOMPATIBLE CHANGES section above)
+- Support for multiple database connections (see INCOMPATIBLE CHANGES 
+    above for notes on potential compatibility concerns)
+- Added DataModelContext->clone() to create a clone of the context
+    with a new database connection.
+- Added DataModelContext->find as a context/connection specific method
+    of retrieving objects. Model.find continues to work with the 
+    default context/connection.
+- Added action_form macro.
+- Added DataObject->has_many_to_many() in order to simplify creation of
+    many to many relationships where the join table is not named in a
+    standard fashion and/or special attribute names are desired in the
+    generated objects. 
+- New applications created with pike -x fins get a fins.sh script that can 
+    be used to run the fins tool more easily (similar to start.sh).
+- Access logging is now performed properly; output is in Common Log Format.
+- Model automatically detects fields with a UNIQUE key, and uses the first
+    in each table as the alternate key when using config via reflection.
+- Added Fins.Model.MetaDataField, which provides a "shadow" field that
+    stores a mapping of data in another field. Useful for storing data
+    that's transient or not otherwise easily stored in a field of its own.
+- DateFields and its derivatives accept time fractions (such as the result 
+    of Calendar.now().)
+- Added LMTP and SMTP processors. Currently, there's not much glue, so
+    you'd need to implement the callbacks (which currently accept any
+    mail delivered.)
+- Added HTTPRequest->get_client_addr() which is X-Forwarded-For aware. 
+    Note that the X-F-F header is easily spoofed, so do not use this
+    in situations where this would be dangerous.
+- Added cast() to Model.DataObjectInstance, to make it easier to get
+    a mapping containing the contents of the object.
+- Added support for controlling FinServe's session configuration values
+    (storage type, location and session timeout) from the app config file.
+- Added text="" option to language_selector macro to specify text in front
+    of the dropdown control. Value defaults to "Language:"
+- Errors generated during template compilation are now handled more 
+     consistently; they are less likely to be swallowed, and are
+     presented to the client uniformly.
+- Fins.StaticController added, which allows static directories to be
+     served from within an app, much like /static/ is served by default.
+- templates that render to wide strings are now automatically encoded
+     as UTF-8 before being returned to the client.
+- ePike templates can call macros using the syntax: <%#macroname%>, 
+    with arguments passed as though a mapping, without the ([]). Example:
+    <%#humanize "var": "standard_id"%>
+- New template type "ePike" provides simple PSP embedded pike syntax for 
+    situations where Simple templates are not expressive enough.
+- Autodetection of Model fields works properly for floats
+    (Christian Ress)
+- Added <%available languages name="varname"%> and <%language_selector%>
+    macros for generating custom and standard language selectors, 
+    respectively.
+- All of the *Request objects treat the presence of a _lang variable 
+    specially as a way to set the LOCALE manually (instead of using 
+    browser headers) for this to work, request->get_lang() must be called 
+    on the page that receives the request with _lang variable, which is 
+    any page that uses a localized string, or the language macros.
+- Added L10n support in template files using <%@project name="project"%>
+    and <%LOCALE id="n" string="string to translate"%>
+- New applications have a locale extractor configuration automatically 
+    created as config/locale.xml, and translation strings folder structure 
+    in translations/. 
+- New Locale Extractor added (pike -x fins extract_locale) with support for
+    Simple templates.
+- FinsController->start() is now called as a callout in order to allow
+    the root of the controller tree to populate first. 
+- Simple template/PSP behavior change: if the result of a variable 
+    replacement is not found (ie, has a zero_type() as in a mapping without 
+    the requested index), the substitution will return an empty string rather 
+    than a zero (0).
+- Extended the Runner interface so that actions that return Runners (like 
+    DocController and filters work properly with url_for_action and friends.
+- Controllers that return runners must retain identity for a given action 
+    in order for url_for_action to work properly.
+- Response.redirect() generates proper absolute URLs in most cases now 
+    (the exception being HTTP/1.0 requests in standalone mode and 
+     possibly FCGI/SCGI requests).
+- added __quiet flag to DocController, which hushes warnings in the debug log
+    generated by events without corresponding templates.
+- pragma is always available in request
+- DocController won't try to locate layouts each request, only the first
+    time and when presented with pragma->nocache.
+- Added dump_data macro
+- Session storage is now available in template data as "session"
+- Added support for caching event lookups. This can improve performance
+    when controller reloading is not enabled for certain request patterns. 
+    Configuration key "cache_events" in the "controller" secion is used 
+    to turn this functionality on.
+- Added support for "around filters" to controllers. 
+- Added Tools.Zip, with support for reading and writing basic Zip files.
+- Added Tools.Mapping.MappingCache, a mapping that forgets entries after a 
+    predefined time.
+- Fixed Fins.Model.find.* for object types that have odd capitalization;
+    everything is all lowercase now.
+- Added Scaffolding template support
+- Added setting of key references in scaffold
+- Added some of the macros needed to make Scaffolding templates easier
+- Added an iterator for DataObjectInstances, with proper field ordering
+- Added Application->get_path_for_action()
+- Added template type StringSimple and Application->get_string_view()
+- Added describe_object and action_link macros
+- Added Application->get_controller_for_path()
+- Added magic field "_id" in model objects for getting the primary key value.
+- Applications are created with default logging configurations for each
+    tier, with a debug and access log.
+- Added Tools.String.named_sprintf().
+- added DataObject->default_sort_fields which configures the order in 
+    which multiple objects of a given type are sorted.
+- automatically set alternate key during model configuration for data sources 
+    that provide unique constraint information (mysql in pike 7.7). 
+- added get_session_by_id() to Fins.Request.
+- added "sessionid" macro
+- pike -x fins start now uses -c|--config= configname, instead of the 
+    config being specified using the last command line argument
+- added pike -x fins model add tablename... to create model stub classes
+- added DataObject, DataObjectInstance->set_operator() to set the operator
+    used during find operations on multiple fields.
+- Added Fins.Model.InCriteria()
+- added FinsController->action_url() to generate urls dynamically with 
+  support for an application's context root (mount point)
+- added FinsView->flush_templates() to flush all cached templates.
+- Response->redirect() is now split into redirect() and redirect_temp().
+- added Stomp and JMS messaging support
+- added controller_name, controller_path and event_name to request
+- added support for layouts in simple templating
+- error messages are themeable: templates/error/[404|500|template].phtml
+- added beginning of scaffolding: crud for basic types, no joins yet.
+- added validation callbacks for data model sets
+- added validation override flags to skip validation
+- added special Fins.Errors.Validation error type.
+- added Fins.Errors for holding special exception types.
+- added more friendly error messages
+- added default event (index) to FinsController.
+- added "internal" templates for things like the default
+    event view (see previous entry).
+- added pike -x fins toolset
+- added pike -x fins create [appname]
+- added pike -x fins start [appname]
+- added automatic registration of datatypes
+- added automatic selection of references from database schema
+- added automatic definition of data types from database schema
+- added plural -> singular noun inflection
+- added singular -> plural noun inflection
+- added macros library: boolean, sizeof, capitalize
+- added javascript macros: remote_form, javascript_includes
+- add_ref() is called more consistently when creating new 
+  data object instances.
+- added support for cache headers for /static/ requests.
+- added Response()->not_modified()
+- added Response()->get_lang() for localization
+- added Response()->fins_app
+- added Configuration()->app_name
+- Template.Simple macro functionality is slightly optimized
+- added command line options for fin_serve, including a daemon mode
+- added FastCGI and SCGI runners in fcgi/
+- added -p portnum option to (f|s)cgi/runners
+- reorganized FinsBase, got rid of methods for app, model, view; added cache
+- moved macros to FinsView
+- moved Fins.Template functionality to FinsView
+- added XMLRPCController, a FinsController variant which allows methods in 
+  a controller to be called via an XMLRPC call to the controller "mount" 
+  point. All public functions will be made available via XMLRPC, and each 
+  receives the Request object as the first argument.
+- created Fins.Template.View as a wrapper around a Template and TemplateData
+- added FinsView->get_view("templatename"), all template getting methods will 
+  automatically add the apropriate template extension, so don't provide the 
+  .phtml or .xml extensions.
+- added Response->set_view(Template.View);
+- added Request()->not_args, the part of the request path that triggered 
+  the event being called.
+- added DocController, a FinsController variant which will pass a 
+  preselected template to the event function, based on the event's 
+  location within the request tree.
+- added config option view/reload that can be used to reload page 
+  templates when they are changed. useful for development purposes.
+- added Model.BinaryStringField, and support for encoding and decoding
+  binary strings.
+- added Model.CompoundCriteria and Model.LimitCriteria
+- added macro: format_time
+- added JSONController
+- added before_filter() and after_filter() to controller
+- added Helpers.Filters.Compress for server->client compression of data.
+- added sliding expiration to cache, moved cache to Fins.Cache.Cache; 
+  leaving a placeholder behind.
+- added "bt" and "backtrace" commands to the breakpoint hilfe.
+- added load_controller(controllername) to FinsController. You must use this
+  method to load controllers now.
+- controllers and view can be set to auto-reload for speedier development
+- added DataObject->add_default_data_object() to allow specification of
+  default objects on new object attributes.
+
